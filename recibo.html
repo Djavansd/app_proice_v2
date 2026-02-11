@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recibo | Proice</title>
+
+  <meta name="theme-color" content="#0b3c6f" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --azul: #0b3c6f;
+      --azul-claro: #e6eef6;
+      --borda: #d1d5db;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fa;
+      color: #1f2937;
+    }
+
+    .recibo {
+      max-width: 900px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--azul);
+      margin-bottom: 6px;
+    }
+
+    .linha {
+      height: 2px;
+      background: var(--azul);
+      margin: 12px 0 20px;
+    }
+
+    .secao {
+      margin-bottom: 18px;
+    }
+
+    .secao strong {
+      display: block;
+      color: var(--azul);
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid var(--borda);
+      padding: 8px;
+    }
+
+    th {
+      background: var(--azul-claro);
+    }
+
+    .total {
+      margin-top: 14px;
+      background: var(--azul);
+      color: #fff;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: right;
+    }
+
+    .observacao {
+      background: var(--azul-claro);
+      padding: 14px;
+      border-radius: 12px;
+      white-space: pre-line;
+      font-size: 14px;
+    }
+
+    .rodape {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    .acoes {
+      margin-top: 28px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .acoes button {
+      padding: 14px 28px;
+      border-radius: 14px;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      background: var(--azul);
+      color: #fff;
+    }
+    /* ===============================
+   AJUSTES EXCLUSIVOS PARA PDF
+   =============================== */
+@media print {
+
+  /* Remove margens e infos do navegador */
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Garante cores fortes (azul Proice) */
+  :root {
+    --azul: #0b3c6f;
+    --azul-claro: #e6eef6;
+  }
+
+  /* Remove qualquer botão ou ação */
+  .acoes,
+  button {
+    display: none !important;
+  }
+
+  /* Remove sombras (PDF limpo) */
+  .recibo {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Ajuste visual do total */
+  .total {
+    background: var(--azul) !important;
+    color: #fff !important;
+  }
+
+  /* Evita quebra feia de tabela */
+  table {
+    page-break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* Tipografia mais firme no papel */
+  h1 {
+    color: var(--azul) !important;
+  }
+
+  strong {
+    color: var(--azul) !important;
+  }
+}
+
+  </style>
+</head>
+
+<body>
+
+<div class="recibo" id="reciboArea">
+
+  <h1>RECIBO DE PAGAMENTO</h1>
+  <div class="linha"></div>
+
+  <div class="secao">
+    <strong>DADOS DO CONTRATANTE</strong>
+    <p><b>Cliente:</b> <span id="rCliente"></span></p>
+    <p><b>CPF/CNPJ:</b> <span id="rDoc"></span></p>
+    <p><b>Endereço:</b> <span id="rEndereco"></span></p>
+    <p><b>Telefone:</b> <span id="rTelefone"></span></p>
+  </div>
+
+  <div class="linha"></div>
+
+  <div class="secao">
+    <p><b>Data:</b> <span id="rData"></span></p>
+    <p><b>Forma de pagamento:</b> <span id="rPagamento"></span></p>
+  </div>
+
+  <div class="secao">
+    <strong>DESCRIÇÃO DOS SERVIÇOS PRESTADOS</strong>
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Qtd</th>
+          <th>Valor</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaItens"></tbody>
+    </table>
+  </div>
+
+  <div class="total">
+    Valor recebido: <span id="rTotal"></span>
+  </div>
+
+  <div class="secao">
+    <strong>Observações</strong>
+    <div class="observacao" id="rObs"></div>
+  </div>
+
+  <div class="rodape">
+    <b>Proice Climatização</b><br>
+    CNPJ: 42.937.499/0001-08<br>
+    São Paulo - SP
+  </div>
+
+  <div class="acoes">
+    <button onclick="baixarPDF()">📄 Baixar PDF</button>
+  </div>
+
+</div>
+
+<script>
+const dados = JSON.parse(sessionStorage.getItem("reciboProice"));
+
+if (!dados) {
+  alert("Nenhum recibo encontrado.");
+} else {
+
+  rCliente.textContent   = dados.nome || "---";
+  rDoc.textContent       = dados.doc || "---";
+  rEndereco.textContent  = dados.endereco || "---";
+  rTelefone.textContent  = dados.telefone || "---";
+  rPagamento.textContent = dados.pagamento || "---";
+  rTotal.textContent     = dados.total || "---";
+  rData.textContent      = new Date().toLocaleDateString("pt-BR");
+  rObs.textContent       = dados.observacao?.trim() || "—";
+
+  const tbody = document.getElementById("tabelaItens");
+  tbody.innerHTML = "";
+
+  dados.itens.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${item.descricao}</td>
+      <td>${item.qtd}</td>
+      <td>${item.valor}</td>
+      <td>${item.subtotal}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+</script>
+<script>
+function baixarPDF() {
+  window.print();
+}
+</script>
+
+
+</body>
+</html>
