@@ -1,135 +1,122 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-    <meta charset="UTF-8">
-    <title>PDF Orçamento | Proice</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f7fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+  <meta charset="UTF-8">
+  <title>PDF Orcamento | Proice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=7">
+  <script>
+    (function aplicarTemaSalvo() {
+      const tema = localStorage.getItem("tema");
+      document.addEventListener("DOMContentLoaded", () => {
+        if (tema === "claro" || tema === "escuro") {
+          document.body.classList.remove("claro", "escuro");
+          document.body.classList.add(tema);
+        } else {
+          document.body.classList.add("escuro");
         }
-
-        .msg {
-            color: #374151;
-            font-size: 14px;
-        }
-    </style>
+      });
+    })();
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
-<body>
+<body class="escuro">
+  <div class="panel pdf-msg">Gerando PDF do orcamento...</div>
 
-<div class="msg">Gerando PDF do orçamento…</div>
-
-<script>
-(function gerarPDF() {
-
-    const dadosStr = sessionStorage.getItem("orcamentoPDF");
-    if (!dadosStr) {
-        document.body.innerText = "Dados do orçamento não encontrados.";
+  <script>
+    (function gerarPDF() {
+      const dadosStr = sessionStorage.getItem("orcamentoPDF") || localStorage.getItem("orcamentoPDF");
+      if (!dadosStr) {
+        document.body.innerText = "Dados do orcamento nao encontrados.";
         return;
-    }
+      }
 
-    const dados = JSON.parse(dadosStr);
-    dados.contatoEmpresa = dados.contatoEmpresa || "";
+      const dados = JSON.parse(dadosStr);
+      dados.contatoEmpresa = dados.contatoEmpresa || "";
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF("p", "mm", "a4");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
 
-    const m = 10;
-    let y = 14;
-    const AZUL = [11, 60, 111];
+      const m = 10;
+      let y = 14;
+      const AZUL = [11, 60, 111];
 
-    /* ===== BORDA ===== */
-    pdf.rect(m, m, 190, 277);
+      pdf.rect(m, m, 190, 277);
 
-    /* ===== CABEÇALHO ===== */
-    pdf.setFontSize(10);
-    pdf.text("PROICE CLIMATIZAÇÃO", 14, y);
-    pdf.text("CNPJ: 42.937.499/0001-08", 14, y + 6);
-    pdf.text("Endereço: São Paulo", 14, y + 12);
+      pdf.setFontSize(10);
+      pdf.text("PROICE CLIMATIZACAO", 14, y);
+      pdf.text("CNPJ: 42.937.499/0001-08", 14, y + 6);
+      pdf.text("Endereco: Sao Paulo", 14, y + 12);
 
-    if (dados.contatoEmpresa.trim() !== "") {
+      if (dados.contatoEmpresa.trim() !== "") {
         pdf.text(dados.contatoEmpresa, 14, y + 18);
-    }
+      }
 
-    /* ===== DATA ===== */
-    const data = new Date().toLocaleDateString("pt-BR");
-    pdf.rect(140, y + 4, 50, 18);
-    pdf.setFontSize(9);
-    pdf.text("DATA DE EMISSÃO", 165, y + 10, { align: "center" });
-    pdf.setFontSize(11);
-    pdf.text(data, 165, y + 17, { align: "center" });
+      const data = new Date().toLocaleDateString("pt-BR");
+      pdf.rect(140, y + 4, 50, 18);
+      pdf.setFontSize(9);
+      pdf.text("DATA DE EMISSAO", 165, y + 10, { align: "center" });
+      pdf.setFontSize(11);
+      pdf.text(data, 165, y + 17, { align: "center" });
 
-    y += 32;
+      y += 32;
 
-    /* ===== CLIENTE ===== */
-    pdf.rect(m, y, 190, 34);
-    pdf.line(110, y, 110, y + 34);
+      pdf.rect(m, y, 190, 34);
+      pdf.line(110, y, 110, y + 34);
 
-    pdf.setFontSize(10);
-    pdf.text(`CLIENTE: ${dados.nome}`, 14, y + 6);
-    pdf.text(`CPF/CNPJ: ${dados.doc}`, 14, y + 12);
+      pdf.setFontSize(10);
+      pdf.text(`CLIENTE: ${dados.nome}`, 14, y + 6);
+      pdf.text(`CPF/CNPJ: ${dados.doc}`, 14, y + 12);
 
-    // 🔧 ENDEREÇO COM QUEBRA AUTOMÁTICA
-    const enderecoQuebrado = pdf.splitTextToSize(
-        `ENDEREÇO: ${dados.endereco}`,
-        90
-    );
-    pdf.text(enderecoQuebrado, 14, y + 18);
+      const enderecoQuebrado = pdf.splitTextToSize(`ENDERECO: ${dados.endereco}`, 90);
+      pdf.text(enderecoQuebrado, 14, y + 18);
 
-    pdf.text(`TELEFONE: ${dados.telefone}`, 114, y + 6);
-    pdf.text(`FORMA PGTO: ${dados.pagamento}`, 114, y + 12);
+      pdf.text(`TELEFONE: ${dados.telefone}`, 114, y + 6);
+      pdf.text(`FORMA PGTO: ${dados.pagamento}`, 114, y + 12);
 
-    y += 40;
+      y += 40;
 
-    /* ===== TÍTULO ===== */
-    pdf.setFillColor(...AZUL);
-    pdf.rect(m, y, 190, 8, "F");
-    pdf.setTextColor(255);
-    pdf.setFontSize(11);
-    pdf.text("ORÇAMENTO", 105, y + 5.5, { align: "center" });
-    pdf.setTextColor(0);
+      pdf.setFillColor(...AZUL);
+      pdf.rect(m, y, 190, 8, "F");
+      pdf.setTextColor(255);
+      pdf.setFontSize(11);
+      pdf.text("ORCAMENTO", 105, y + 5.5, { align: "center" });
+      pdf.setTextColor(0);
 
-    y += 8;
+      y += 8;
 
-    /* ===== TABELA ===== */
-    pdf.setFillColor(220, 230, 242);
-    pdf.rect(m, y, 190, 9, "F");
-    pdf.rect(m, y, 190, 9);
+      pdf.setFillColor(220, 230, 242);
+      pdf.rect(m, y, 190, 9, "F");
+      pdf.rect(m, y, 190, 9);
 
-    const colDesc = 120;
-    const colQtd = 140;
-    const colValor = 165;
+      const colDesc = 120;
+      const colQtd = 140;
+      const colValor = 165;
 
-    pdf.line(colDesc, y, colDesc, y + 9);
-    pdf.line(colQtd, y, colQtd, y + 9);
-    pdf.line(colValor, y, colValor, y + 9);
+      pdf.line(colDesc, y, colDesc, y + 9);
+      pdf.line(colQtd, y, colQtd, y + 9);
+      pdf.line(colValor, y, colValor, y + 9);
 
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, "bold");
-    pdf.text("DESCRIÇÃO", 14, y + 6);
-    pdf.text("QTD", colDesc + 4, y + 6);
-    pdf.text("VALOR", colQtd + 4, y + 6);
-    pdf.text("SUBTOTAL", colValor + 4, y + 6);
-    pdf.setFont(undefined, "normal");
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, "bold");
+      pdf.text("DESCRICAO", 14, y + 6);
+      pdf.text("QTD", colDesc + 4, y + 6);
+      pdf.text("VALOR", colQtd + 4, y + 6);
+      pdf.text("SUBTOTAL", colValor + 4, y + 6);
+      pdf.setFont(undefined, "normal");
 
-    y += 9;
+      y += 9;
+      pdf.setFontSize(9);
 
-    pdf.setFontSize(9);
-
-    dados.itens.forEach(item => {
+      dados.itens.forEach(item => {
         if (y > 250) {
-            pdf.addPage();
-            y = 20;
+          pdf.addPage();
+          y = 20;
         }
 
         pdf.rect(m, y, 190, 8);
@@ -143,33 +130,30 @@
         pdf.text(item.subtotal, colValor + 4, y + 5);
 
         y += 8;
-    });
+      });
 
-    /* ===== TOTAL ===== */
-    pdf.setFillColor(...AZUL);
-    pdf.rect(m, y, 190, 8, "F");
-    pdf.setTextColor(255);
-    pdf.setFontSize(11);
-    pdf.text(`VALOR TOTAL ${dados.total}`, 105, y + 5.5, { align: "center" });
-    pdf.setTextColor(0);
+      pdf.setFillColor(...AZUL);
+      pdf.rect(m, y, 190, 8, "F");
+      pdf.setTextColor(255);
+      pdf.setFontSize(11);
+      pdf.text(`VALOR TOTAL ${dados.total}`, 105, y + 5.5, { align: "center" });
+      pdf.setTextColor(0);
 
-    y += 12;
+      y += 12;
 
-    /* ===== OBSERVAÇÕES ===== */
-    if (dados.observacao && dados.observacao.trim() !== "") {
+      if (dados.observacao && dados.observacao.trim() !== "") {
         pdf.setFontSize(10);
-        pdf.text("OBSERVAÇÕES:", 14, y);
+        pdf.text("OBSERVACOES:", 14, y);
         y += 5;
 
         const obs = pdf.splitTextToSize(dados.observacao, 180);
         pdf.setFontSize(9);
         pdf.text(obs, 14, y);
-    }
+      }
 
-    pdf.save("orcamento.pdf");
-
-})();
-</script>
-
+      pdf.save("orcamento.pdf");
+    })();
+  </script>
 </body>
+
 </html>
