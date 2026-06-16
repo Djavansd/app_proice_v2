@@ -11,7 +11,7 @@ lista.innerHTML = `<div class="relatorio-row"><div>Carregando...</div><div></div
 
 observeExpenses(
   (expenses) => {
-    dados = expenses.filter(isMobileExpense);
+    dados = expenses.filter((expense) => isMobileExpense(expense) && isCurrentMonthExpense(expense));
     renderizar();
   },
   (error) => {
@@ -195,4 +195,9 @@ function isMobileExpense(expense) {
     expense.category === "App financeiro" ||
     expense.categoria === "App financeiro"
   );
+}
+
+function isCurrentMonthExpense(expense) {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  return String(expense.createdAt || "").slice(0, 7) === currentMonth;
 }
