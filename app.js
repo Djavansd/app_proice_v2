@@ -1,5 +1,7 @@
 const descricaoInput = document.getElementById("descricao");
 const descricoesSalvas = document.getElementById("descricoesSalvas");
+const responsavelInput = document.getElementById("responsavel");
+const responsaveisSalvos = document.getElementById("responsaveisSalvos");
 const valorInput = document.getElementById("valor");
 const lista = document.getElementById("lista");
 const btnSalvar = document.getElementById("btnSalvar");
@@ -9,8 +11,10 @@ const { addExpense, deleteExpense, migrateLocalExpenses, observeExpenses } = win
 
 let gastos = [];
 let historicoDescricoes = JSON.parse(localStorage.getItem("historicoDescricoes") || "[]");
+let historicoResponsaveis = JSON.parse(localStorage.getItem("historicoResponsaveis") || "[]");
 
 renderizarDescricoesSalvas();
+renderizarResponsaveisSalvos();
 lista.innerHTML = `<div class="gasto-item"><strong>Carregando gastos...</strong></div>`;
 
 migrateLocalExpenses().catch((error) => {
@@ -34,10 +38,11 @@ valorInput.addEventListener("input", () => {
 });
 
 btnSalvar.onclick = async function () {
+  const responsavel = responsavelInput.value.trim();
   const descricao = descricaoInput.value.trim();
   const valorTexto = valorInput.value.trim().replace(",", ".");
 
-  if (!descricao || !valorTexto) {
+  if (!responsavel || !descricao || !valorTexto) {
     alert("Preencha todos os campos.");
     return;
   }
@@ -49,12 +54,15 @@ btnSalvar.onclick = async function () {
 
   try {
     btnSalvar.disabled = true;
+    salvarResponsavel(responsavel);
     salvarDescricao(descricao);
     await addExpense({
+      responsible: responsavel,
       description: descricao,
       amount: Number(valorTexto),
     });
 
+    responsavelInput.value = responsavel;
     descricaoInput.value = "";
     valorInput.value = "";
   } catch (error) {
@@ -76,7 +84,7 @@ function renderizar() {
     item.innerHTML = `
       <div>
         <strong>${escapeHtml(g.description || g.descricao)}</strong><br>
-        <small>${escapeHtml(g.data)} - ${escapeHtml(g.hora)}</small><br>
+        <small>${escapeHtml(g.responsible || g.responsavel || "Sem responsavel")} - ${escapeHtml(g.data)} - ${escapeHtml(g.hora)}</small><br>
         <strong>${formatCurrency(g.amount || g.valor || 0)}</strong>
       </div>
       <button class="gasto-remove" aria-label="Excluir gasto">X</button>
@@ -240,6 +248,27 @@ function renderizarDescricoesSalvas() {
     const opcao = document.createElement("option");
     opcao.value = descricao;
     descricoesSalvas.appendChild(opcao);
+  });
+}
+
+function salvarResponsavel(responsavel) {
+  const jaExiste = historicoResponsaveis.some((item) => item.toLowerCase() === responsavel.toLowerCase());
+
+  if (!jaExiste) {
+    historicoResponsaveis.unshift(responsavel);
+    historicoResponsaveis = historicoResponsaveis.slice(0, 30);
+    localStorage.setItem("historicoResponsaveis", JSON.stringify(historicoResponsaveis));
+    renderizarResponsaveisSalvos();
+  }
+}
+
+function renderizarResponsaveisSalvos() {
+  responsaveisSalvos.innerHTML = "";
+
+  historicoResponsaveis.forEach((responsavel) => {
+    const opcao = document.createElement("option");
+    opcao.value = responsavel;
+    responsaveisSalvos.appendChild(opcao);
   });
 }
 

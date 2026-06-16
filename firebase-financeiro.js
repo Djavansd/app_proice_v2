@@ -48,6 +48,7 @@
   function normalizeExpense(expense) {
     const amount = Number(expense.amount ?? expense.valor) || 0;
     const description = String(expense.description || expense.descricao || "").trim();
+    const responsible = String(expense.responsible || expense.responsavel || "Sem responsavel").trim();
     const createdAt = expense.createdAt || expense.criadoEm || new Date().toISOString();
     const formattedDate = formatExpenseDate(createdAt);
 
@@ -55,6 +56,8 @@
       id: expense.id || generateId("expense"),
       description,
       descricao: description,
+      responsible,
+      responsavel: responsible,
       category: String(expense.category || expense.categoria || "App financeiro").trim(),
       amount,
       valor: amount,
@@ -98,6 +101,7 @@
       const normalized = {
         id: expense.id || `appv2-${Math.abs(hashText(`${description}|${amount}|${createdAt}`))}`,
         description,
+        responsible: expense.responsible || expense.responsavel || "Sem responsavel",
         category: expense.category || expense.categoria || "App financeiro",
         amount,
         createdAt,
@@ -127,9 +131,14 @@
     );
   }
 
-  async function addExpense({ description, amount }) {
+  async function addExpense({ responsible, description, amount }) {
+    const cleanResponsible = String(responsible || "").trim();
     const cleanDescription = String(description || "").trim();
     const cleanAmount = Number(amount);
+
+    if (!cleanResponsible) {
+      throw new Error("Informe quem esta lancando.");
+    }
 
     if (!cleanDescription) {
       throw new Error("Preencha a descricao.");
@@ -147,6 +156,8 @@
       manualExpenses.unshift({
         id: generateId("expense"),
         description: cleanDescription,
+        responsible: cleanResponsible,
+        responsavel: cleanResponsible,
         category: "App financeiro",
         amount: cleanAmount,
         createdAt: new Date().toISOString(),

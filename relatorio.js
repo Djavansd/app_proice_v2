@@ -41,7 +41,7 @@ function renderizar() {
     linha.className = "relatorio-row";
     linha.innerHTML = `
       <div>${escapeHtml(g.data)} ${escapeHtml(g.hora)}</div>
-      <div>${escapeHtml(g.description || g.descricao)}</div>
+      <div>${escapeHtml(g.responsible || g.responsavel || "Sem responsavel")} - ${escapeHtml(g.description || g.descricao)}</div>
       <div>${formatCurrency(amount)}</div>
       <div><button class="relatorio-delete">X</button></div>
     `;
@@ -121,7 +121,7 @@ btnPdf.onclick = async () => {
   let soma = 0;
 
   dados.forEach((g) => {
-    const desc = String(g.description || g.descricao || "");
+    const desc = `${g.responsible || g.responsavel || "Sem responsavel"} - ${g.description || g.descricao || ""}`;
     const amount = Number(g.amount || g.valor || 0);
 
     doc.setFont("helvetica", "normal");
