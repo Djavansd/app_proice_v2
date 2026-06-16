@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="manifest" href="/manifest.json?v=7">
+  <link rel="manifest" href="/manifest.json?v=8">
   <meta name="theme-color" content="#0f3a66">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 
 <body class="escuro">
@@ -20,8 +20,9 @@
       <button id="btnTema" aria-label="Alternar tema"></button>
     </div>
 
-    <input id="descricao" placeholder="Descricao">
-    <input id="valor" type="number" placeholder="Valor">
+    <input id="descricao" list="descricoesSalvas" placeholder="Descricao">
+    <datalist id="descricoesSalvas"></datalist>
+    <input id="valor" type="text" inputmode="decimal" placeholder="Valor">
 
     <button class="btn btn-verde" id="btnSalvar">Salvar gasto</button>
     <button class="btn btn-azul" id="btnPdf">Visualizar e enviar PDF</button>
@@ -77,7 +78,7 @@
   </script>
   <script>
     if ("serviceWorker" in navigator) {
-      const APP_VERSION = "2026.02.23.7";
+      const APP_VERSION = "2026.02.23.8";
       const APP_VERSION_KEY = "__proice_app_version__";
       let jaRecarregouPorSW = false;
 
@@ -107,11 +108,11 @@
         try {
           const migrou = await migrarVersaoSeNecessario();
           if (migrou) {
-            window.location.replace("./index.html?v=7");
+            window.location.replace("./index.html?v=8");
             return;
           }
 
-          const reg = await navigator.serviceWorker.register("./service-worker.js?v=7", { updateViaCache: "none" });
+          const reg = await navigator.serviceWorker.register("./service-worker.js?v=8", { updateViaCache: "none" });
           pedirAtivacao(reg);
 
           reg.addEventListener("updatefound", () => {
@@ -140,9 +141,11 @@
   </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="app.js?v=7"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js?v=8"></script>
+  <script src="firebase-financeiro.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 
 </html>
-
-

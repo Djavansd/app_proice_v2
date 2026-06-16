@@ -1,181 +1,260 @@
-window.onload = function () {
-  const descricaoInput = document.getElementById("descricao");
-  const valorInput = document.getElementById("valor");
-  const lista = document.getElementById("lista");
-  const btnSalvar = document.getElementById("btnSalvar");
-  const btnPdf = document.getElementById("btnPdf");
-  const totalSpan = document.getElementById("total");
-  const CHAVE_RASCUNHO_GASTO = "rascunhoGastoProice";
+const descricaoInput = document.getElementById("descricao");
+const descricoesSalvas = document.getElementById("descricoesSalvas");
+const valorInput = document.getElementById("valor");
+const lista = document.getElementById("lista");
+const btnSalvar = document.getElementById("btnSalvar");
+const btnPdf = document.getElementById("btnPdf");
+const totalSpan = document.getElementById("total");
+const { addExpense, deleteExpense, migrateLocalExpenses, observeExpenses } = window.ProiceFinanceiro;
 
-  let gastos = JSON.parse(localStorage.getItem("gastos")) || [];
-  restaurarRascunho();
-  renderizar();
+let gastos = [];
+let historicoDescricoes = JSON.parse(localStorage.getItem("historicoDescricoes") || "[]");
 
-  btnSalvar.onclick = function () {
-    if (!descricaoInput.value || !valorInput.value) {
-      alert("Preencha todos os campos.");
-      return;
-    }
+renderizarDescricoesSalvas();
+lista.innerHTML = `<div class="gasto-item"><strong>Carregando gastos...</strong></div>`;
 
-    const agora = new Date();
-    const gasto = {
-      descricao: descricaoInput.value,
-      valor: Number(valorInput.value),
-      data: agora.toLocaleDateString("pt-BR"),
-      hora: agora.toLocaleTimeString("pt-BR")
-    };
+migrateLocalExpenses().catch((error) => {
+  console.error(error);
+  alert("Nao foi possivel migrar os gastos antigos do aparelho.");
+});
 
-    gastos.push(gasto);
-    localStorage.setItem("gastos", JSON.stringify(gastos));
+observeExpenses(
+  (expenses) => {
+    gastos = expenses;
+    renderizar();
+  },
+  (error) => {
+    console.error(error);
+    lista.innerHTML = `<div class="gasto-item"><strong>Erro ao carregar o financeiro.</strong><br><small>Confira as regras do Firestore para permitir acesso ao documento proice/main.</small></div>`;
+  }
+);
 
-    const rel = JSON.parse(localStorage.getItem("relatorioMensal")) || [];
-    rel.push(gasto);
-    localStorage.setItem("relatorioMensal", JSON.stringify(rel));
+valorInput.addEventListener("input", () => {
+  valorInput.value = valorInput.value.replace(/[^0-9.,]/g, "");
+});
+
+btnSalvar.onclick = async function () {
+  const descricao = descricaoInput.value.trim();
+  const valorTexto = valorInput.value.trim().replace(",", ".");
+
+  if (!descricao || !valorTexto) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  if (!/^\d+([.,]\d+)?$/.test(valorInput.value.trim())) {
+    alert("O valor deve conter apenas numeros.");
+    return;
+  }
+
+  try {
+    btnSalvar.disabled = true;
+    salvarDescricao(descricao);
+    await addExpense({
+      description: descricao,
+      amount: Number(valorTexto),
+    });
 
     descricaoInput.value = "";
     valorInput.value = "";
-    limparRascunho();
-    renderizar();
-  };
-
-  function salvarRascunho() {
-    const dados = {
-      descricao: descricaoInput.value || "",
-      valor: valorInput.value || ""
-    };
-    localStorage.setItem(CHAVE_RASCUNHO_GASTO, JSON.stringify(dados));
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    btnSalvar.disabled = false;
   }
+};
 
-  function restaurarRascunho() {
-    const rascunho = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO_GASTO) || "null");
-    if (!rascunho) return;
-    descricaoInput.value = rascunho.descricao || "";
-    valorInput.value = rascunho.valor || "";
-  }
+function renderizar() {
+  lista.innerHTML = "";
+  let total = 0;
 
-  function limparRascunho() {
-    localStorage.removeItem(CHAVE_RASCUNHO_GASTO);
-  }
+  gastos.forEach((g) => {
+    total += Number(g.amount || g.valor || 0);
 
-  descricaoInput.addEventListener("input", salvarRascunho);
-  valorInput.addEventListener("input", salvarRascunho);
-  window.addEventListener("beforeunload", salvarRascunho);
+    const item = document.createElement("div");
+    item.className = "gasto-item";
+    item.innerHTML = `
+      <div>
+        <strong>${escapeHtml(g.description || g.descricao)}</strong><br>
+        <small>${escapeHtml(g.data)} - ${escapeHtml(g.hora)}</small><br>
+        <strong>${formatCurrency(g.amount || g.valor || 0)}</strong>
+      </div>
+      <button class="gasto-remove" aria-label="Excluir gasto">X</button>
+    `;
 
-  function renderizar() {
-    lista.innerHTML = "";
-    let total = 0;
-
-    gastos.forEach((g, i) => {
-      total += g.valor;
-
-      const item = document.createElement("div");
-      item.className = "gasto-item";
-      item.innerHTML = `
-        <div>
-          <strong>${g.descricao}</strong><br>
-          <small>${g.data} • ${g.hora}</small><br>
-          <strong>R$ ${g.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
-        </div>
-        <button class="gasto-remove" aria-label="Excluir gasto">X</button>
-      `;
-
-      item.querySelector("button").onclick = () => {
-        gastos.splice(i, 1);
-        localStorage.setItem("gastos", JSON.stringify(gastos));
-        renderizar();
-      };
-
-      lista.appendChild(item);
-    });
-
-    totalSpan.innerText =
-      "Total: R$ " + total.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-  }
-
-  function getMesAnoAtual() {
-    const meses = [
-      "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-    ];
-    const hoje = new Date();
-    return `${meses[hoje.getMonth()]} / ${hoje.getFullYear()}`;
-  }
-
-  function gerarPdf() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "mm", "a4");
-
-    doc.setFillColor(11, 90, 162);
-    doc.rect(0, 0, 210, 26, "F");
-
-    doc.setTextColor(255);
-    doc.setFontSize(14);
-    doc.text("PROICE CLIMATIZACAO", 14, 16);
-
-    doc.setFontSize(9);
-    doc.text(`Relatorio de Gastos - ${getMesAnoAtual()}`, 14, 22);
-
-    doc.setTextColor(0);
-    let y = 36;
-
-    doc.setFillColor(235, 235, 235);
-    doc.rect(12, y - 6, 186, 10, "F");
-
-    doc.setFontSize(9);
-    doc.text("DATA / HORA", 16, y);
-    doc.text("DESCRICAO", 80, y);
-    doc.text("VALOR", 190, y, { align: "right" });
-
-    y += 12;
-    let total = 0;
-
-    gastos.forEach(g => {
-      doc.setFontSize(8);
-      doc.text(`${g.data} ${g.hora}`, 16, y);
-      doc.text(g.descricao, 80, y);
-      doc.text(
-        "R$ " + g.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-        190, y, { align: "right" }
-      );
-      total += g.valor;
-      y += 10;
-    });
-
-    y += 6;
-    doc.line(12, y, 198, y);
-
-    doc.setFontSize(11);
-    doc.text("TOTAL:", 150, y + 9);
-    doc.text(
-      "R$ " + total.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-      190, y + 9, { align: "right" }
-    );
-
-    return doc;
-  }
-
-  btnPdf.onclick = async function () {
-    if (gastos.length === 0) {
-      alert("Nao ha gastos para gerar PDF.");
-      return;
-    }
-
-    const doc = gerarPdf();
-
-    if (navigator.canShare) {
-      const blob = doc.output("blob");
-      const file = new File([blob], "proice-gastos.pdf", { type: "application/pdf" });
-
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "Relatorio de Gastos",
-          text: "Relatorio de gastos - Proice Climatizacao"
-        });
+    item.querySelector("button").onclick = async () => {
+      if (!confirm("Excluir este gasto?")) {
         return;
       }
-    }
 
-    window.open(doc.output("bloburl"), "_blank");
-  };
+      try {
+        await deleteExpense(g.id);
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    lista.appendChild(item);
+  });
+
+  if (!gastos.length) {
+    lista.innerHTML = `<div class="gasto-item"><strong>Nenhum gasto lancado.</strong></div>`;
+  }
+
+  totalSpan.innerText = `Total: ${formatCurrency(total)}`;
+}
+
+function getMesAnoAtual() {
+  const meses = [
+    "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  const hoje = new Date();
+  return `${meses[hoje.getMonth()]} / ${hoje.getFullYear()}`;
+}
+
+function gerarPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4");
+  const pageW = 210;
+  const pageH = 297;
+  const marginX = 10;
+  const headerH = 24;
+  const tableY = 32;
+  const tableHeaderH = 8;
+  const totalH = 13;
+  const bottomMargin = 8;
+  const colData = 58;
+  const colValor = 34;
+  const colX = [marginX, marginX + colData, pageW - marginX - colValor, pageW - marginX];
+  const descW = colX[2] - colX[1] - 4;
+  const availableRowsH = pageH - tableY - tableHeaderH - totalH - bottomMargin;
+  const rowH = Math.max(3.8, Math.min(8, availableRowsH / Math.max(gastos.length, 1)));
+  const fontSize = Math.max(4.8, Math.min(8, rowH * 0.72));
+  const lineY = rowH < 5 ? rowH - 1.1 : rowH / 2 + fontSize * 0.22;
+
+  doc.setFillColor(11, 90, 162);
+  doc.rect(0, 0, pageW, headerH, "F");
+  doc.setTextColor(255);
+  doc.setFontSize(12);
+  doc.text("PROICE CLIMATIZACAO", 14, 13);
+  doc.setFontSize(9);
+  doc.text(`Relatorio de Gastos - ${getMesAnoAtual()}`, 14, 19);
+
+  doc.setTextColor(0);
+  let y = tableY;
+
+  doc.setFillColor(235, 235, 235);
+  doc.rect(marginX, y - 5, pageW - marginX * 2, tableHeaderH, "F");
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.15);
+  doc.rect(marginX, y - 5, pageW - marginX * 2, tableHeaderH);
+  doc.line(colX[1], y - 5, colX[1], y - 5 + tableHeaderH);
+  doc.line(colX[2], y - 5, colX[2], y - 5 + tableHeaderH);
+
+  doc.setFontSize(7.2);
+  doc.setFont("helvetica", "bold");
+  doc.text("DATA / HORA", marginX + 3, y);
+  doc.text("DESCRICAO", colX[1] + 3, y);
+  doc.text("VALOR", colX[3] - 3, y, { align: "right" });
+
+  y += tableHeaderH;
+  let total = 0;
+
+  gastos.forEach((g) => {
+    const desc = String(g.description || g.descricao || "");
+    const amount = Number(g.amount || g.valor || 0);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+    const descFonte = Math.max(2.8, Math.min(fontSize, fontSize * (descW / Math.max(descW, doc.getTextWidth(desc)))));
+
+    doc.setDrawColor(234, 234, 234);
+    doc.rect(marginX, y - 4.3, pageW - marginX * 2, rowH);
+    doc.line(colX[1], y - 4.3, colX[1], y - 4.3 + rowH);
+    doc.line(colX[2], y - 4.3, colX[2], y - 4.3 + rowH);
+    doc.setFontSize(fontSize);
+    doc.text(`${g.data} ${g.hora}`, marginX + 3, y - 4.3 + lineY);
+    doc.setFontSize(descFonte);
+    doc.text(desc, colX[1] + 3, y - 4.3 + lineY);
+    doc.setFontSize(fontSize);
+    doc.text(formatCurrency(amount), colX[3] - 3, y - 4.3 + lineY, { align: "right" });
+    total += amount;
+    y += rowH;
+  });
+
+  doc.setFillColor(248, 250, 252);
+  doc.rect(marginX, y - 4.3, pageW - marginX * 2, totalH, "F");
+  doc.setDrawColor(220, 220, 220);
+  doc.rect(marginX, y - 4.3, pageW - marginX * 2, totalH);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("TOTAL:", colX[2] - 4, y + 4, { align: "right" });
+  doc.text(formatCurrency(total), colX[3] - 3, y + 4, { align: "right" });
+
+  return doc;
+}
+
+btnPdf.onclick = async function () {
+  if (gastos.length === 0) {
+    alert("Nao ha gastos para gerar PDF.");
+    return;
+  }
+
+  const doc = gerarPdf();
+
+  if (navigator.canShare) {
+    const blob = doc.output("blob");
+    const file = new File([blob], "proice-gastos.pdf", { type: "application/pdf" });
+
+    if (navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: "Relatorio de Gastos",
+        text: "Relatorio de gastos - Proice Climatizacao"
+      });
+      return;
+    }
+  }
+
+  const textoWhatsApp = encodeURIComponent("Relatorio de gastos - Proice Climatizacao. O PDF foi gerado no aplicativo.");
+  window.open(`https://wa.me/?text=${textoWhatsApp}`, "_blank");
+  window.open(doc.output("bloburl"), "_blank");
 };
+
+function salvarDescricao(descricao) {
+  const jaExiste = historicoDescricoes.some((item) => item.toLowerCase() === descricao.toLowerCase());
+
+  if (!jaExiste) {
+    historicoDescricoes.unshift(descricao);
+    historicoDescricoes = historicoDescricoes.slice(0, 80);
+    localStorage.setItem("historicoDescricoes", JSON.stringify(historicoDescricoes));
+    renderizarDescricoesSalvas();
+  }
+}
+
+function renderizarDescricoesSalvas() {
+  descricoesSalvas.innerHTML = "";
+
+  historicoDescricoes.forEach((descricao) => {
+    const opcao = document.createElement("option");
+    opcao.value = descricao;
+    descricoesSalvas.appendChild(opcao);
+  });
+}
+
+function formatCurrency(value) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}

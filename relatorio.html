@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
   <script>
     (function aplicarTemaSalvo() {
       const tema = localStorage.getItem("tema");
@@ -55,132 +55,11 @@
     </div>
   </div>
 
-  <script>
-    const lista = document.getElementById("lista");
-    const totalEl = document.getElementById("total");
-    const mesEl = document.getElementById("mesRelatorio");
-    const btnPdf = document.getElementById("btnPdf");
-
-    function getMesAnoAtual() {
-      const meses = [
-        "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
-        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-      ];
-      const hoje = new Date();
-      return `${meses[hoje.getMonth()]} / ${hoje.getFullYear()}`;
-    }
-
-    mesEl.innerText = `Relatorio Mensal - ${getMesAnoAtual()}`;
-    let dados = JSON.parse(localStorage.getItem("relatorioMensal")) || [];
-
-    function renderizar() {
-      lista.innerHTML = "";
-      let total = 0;
-
-      dados.forEach((g, index) => {
-        total += g.valor;
-
-        const linha = document.createElement("div");
-        linha.className = "relatorio-row";
-
-        linha.innerHTML = `
-          <div>${g.data} ${g.hora}</div>
-          <div>${g.descricao}</div>
-          <div>R$ ${g.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-          <div><button class="relatorio-delete">X</button></div>
-        `;
-
-        linha.querySelector("button").onclick = () => {
-          if (confirm("Excluir este lancamento?")) {
-            dados.splice(index, 1);
-            localStorage.setItem("relatorioMensal", JSON.stringify(dados));
-            renderizar();
-          }
-        };
-
-        lista.appendChild(linha);
-      });
-
-      totalEl.innerText = "R$ " + total.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-    }
-
-    renderizar();
-
-    btnPdf.onclick = async () => {
-      if (dados.length === 0) {
-        alert("Nao ha dados para gerar PDF.");
-        return;
-      }
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF("p", "mm", "a4");
-
-      doc.setFillColor(11, 90, 162);
-      doc.rect(0, 0, 210, 24, "F");
-      doc.setTextColor(255);
-      doc.setFontSize(13);
-      doc.text("PROICE CLIMATIZACAO", 105, 14, { align: "center" });
-      doc.setFontSize(9);
-      doc.text(`Relatorio Mensal - ${getMesAnoAtual()}`, 105, 20, { align: "center" });
-
-      let y = 32;
-      const colX = [14, 70, 150, 196];
-      const rowH = 8;
-
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-
-      doc.rect(colX[0], y, colX[3] - colX[0], rowH);
-      doc.line(colX[1], y, colX[1], y + rowH);
-      doc.line(colX[2], y, colX[2], y + rowH);
-
-      doc.text("Data / Hora", (colX[0] + colX[1]) / 2, y + 5, { align: "center" });
-      doc.text("Descricao", (colX[1] + colX[2]) / 2, y + 5, { align: "center" });
-      doc.text("Valor", (colX[2] + colX[3]) / 2, y + 5, { align: "center" });
-
-      y += rowH;
-      let soma = 0;
-
-      dados.forEach(g => {
-        doc.rect(colX[0], y, colX[3] - colX[0], rowH);
-        doc.line(colX[1], y, colX[1], y + rowH);
-        doc.line(colX[2], y, colX[2], y + rowH);
-
-        doc.text(`${g.data} ${g.hora}`, (colX[0] + colX[1]) / 2, y + 5, { align: "center" });
-        doc.text(g.descricao, (colX[1] + colX[2]) / 2, y + 5, { align: "center" });
-        doc.text(
-          "R$ " + g.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-          (colX[2] + colX[3]) / 2,
-          y + 5,
-          { align: "center" }
-        );
-
-        soma += g.valor;
-        y += rowH;
-      });
-
-      doc.line(colX[0], y, colX[3], y);
-      doc.setFontSize(9);
-      doc.text("TOTAL:", colX[2] - 4, y + 6, { align: "right" });
-      doc.text("R$ " + soma.toLocaleString("pt-BR", { minimumFractionDigits: 2 }), colX[3], y + 6, { align: "right" });
-
-      if (navigator.canShare) {
-        const blob = doc.output("blob");
-        const file = new File([blob], `proice-relatorio-${getMesAnoAtual().replace(" / ", "-")}.pdf`, { type: "application/pdf" });
-
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: "Relatorio Mensal",
-            text: "Relatorio mensal - Proice Climatizacao"
-          });
-          return;
-        }
-      }
-
-      doc.save(`proice-relatorio-${getMesAnoAtual().replace(" / ", "-")}.pdf`);
-    };
-  </script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js?v=8"></script>
+  <script src="firebase-financeiro.js?v=8"></script>
+  <script src="relatorio.js?v=8"></script>
 </body>
 
 </html>
