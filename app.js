@@ -24,7 +24,7 @@ migrateLocalExpenses().catch((error) => {
 
 observeExpenses(
   (expenses) => {
-    gastos = expenses;
+    gastos = expenses.filter(isMobileExpense);
     renderizar();
   },
   (error) => {
@@ -270,6 +270,15 @@ function renderizarResponsaveisSalvos() {
     opcao.value = responsavel;
     responsaveisSalvos.appendChild(opcao);
   });
+}
+
+function isMobileExpense(expense) {
+  return (
+    expense.source === "app_proice_v2" ||
+    expense.origem === "app_proice_v2" ||
+    expense.category === "App financeiro" ||
+    expense.categoria === "App financeiro"
+  );
 }
 
 function formatCurrency(value) {

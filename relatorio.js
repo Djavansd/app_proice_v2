@@ -11,7 +11,7 @@ lista.innerHTML = `<div class="relatorio-row"><div>Carregando...</div><div></div
 
 observeExpenses(
   (expenses) => {
-    dados = expenses;
+    dados = expenses.filter(isMobileExpense);
     renderizar();
   },
   (error) => {
@@ -186,4 +186,13 @@ function escapeHtml(value = "") {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function isMobileExpense(expense) {
+  return (
+    expense.source === "app_proice_v2" ||
+    expense.origem === "app_proice_v2" ||
+    expense.category === "App financeiro" ||
+    expense.categoria === "App financeiro"
+  );
 }
